@@ -163,7 +163,6 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         isGenerateApiTests = System.getProperty(CodegenConstants.API_TESTS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_TESTS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_TESTS, true);
         isGenerateApiDocumentation = System.getProperty(CodegenConstants.API_DOCS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_DOCS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_DOCS, true);
 
-
         // Additional properties added for tests to exclude references in project related files
         config.additionalProperties().put(CodegenConstants.GENERATE_API_TESTS, isGenerateApiTests);
         config.additionalProperties().put(CodegenConstants.GENERATE_MODEL_TESTS, isGenerateModelTests);
@@ -623,7 +622,6 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                                 })
                                 .defaultValue("")
                                 .compile(template);
-
                         writeToFile(outputFilename, tmpl.execute(bundle));
                         files.add(new File(outputFilename));
                     } else {
@@ -725,6 +723,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         bundle.put("models", allModels);
         bundle.put("apiFolder", config.apiPackage().replace('.', File.separatorChar));
         bundle.put("modelPackage", config.modelPackage());
+        bundle.put(CodegenConstants.OPTIONAL_GENERATE_CUSTOM_SCOPES, config.isGenerateCustomScopes());
         List<CodegenSecurity> authMethods = config.fromSecurity(swagger.getSecurityDefinitions());
         if (authMethods != null && !authMethods.isEmpty()) {
             bundle.put("authMethods", authMethods);
@@ -746,6 +745,86 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             Json.prettyPrint(bundle);
         }
         return bundle;
+    }
+
+    private void generateCustomScopes(List<File> files, List<CodegenSecurity> auths) {
+        if (auths != null) {
+            for (CodegenSecurity auth : auths) {
+                if (auth.scopes != null) {
+                    for (Map<String, Object> scope : auth.scopes) {
+                        for (String templateName : config.scopeTemplateFiles().keySet()) {
+                            String filename = config.scopeFilename(templateName, (String)scope.get("scope"));
+                            if (!config.shouldOverwrite(filename) && new File(filename).exists()) {
+                                LOGGER.info("Skipped overwriting " + filename);
+                                continue;
+                            }
+                            try {
+                                Map<String, Object> tmpscope = new HashMap<String, Object>();
+                                tmpscope.putAll(config.additionalProperties());
+                                tmpscope.putAll(scope);
+                                File written = processTemplateToFile(tmpscope, templateName, filename);
+                                if (written != null) {
+                                    files.add(written);
+                                }
+                            } catch (java.io.IOException e) {
+                                LOGGER.error("IO Exception when trying to create file: " + filename);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private List<String> getAllSwaggerDefinedScopes(Swagger swagger) {
+        //swagger -> paths -> [<path>] -> [<action>] -> security -> []
+        Set<String> allscopes = new HashSet<String>();
+        if (swagger != null) {
+            Map<String, Path> paths = (Map<String, Path>) swagger.getPaths();
+            if (paths != null) {
+                for (String resourcePath : paths.keySet()) {
+                    Path path = paths.get(resourcePath);
+                    List<Operation> ops = path.getOperations();
+                    if (ops != null) {
+                        for (Operation op : ops) {
+                            List<Map<String, List<String>>> securities = op.getSecurity();
+                            if (securities != null) {
+                                for (Map<String, List<String>> security : securities) {
+                                    for (String auth_key : security.keySet()) {
+                                        List<String> scopes = security.get(auth_key);
+                                        if (scopes != null && scopes.size() > 0) {
+                                            for (String scope : scopes) {
+                                                allscopes.add(scope);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Arrays.asList(allscopes.toArray(new String[0]));
+    }
+
+    private List<String> getAllAuthMethodScopes(List<CodegenSecurity> auths) {
+        // authMethods -> [] -> scopes
+        Set<String> scopes = new HashSet<String>();
+        if (auths != null) {
+            for (CodegenSecurity auth : auths) {
+                if (auth.scopes != null) {
+                    for (Map<String, Object> scope : auth.scopes) {
+                        for (Map.Entry<String, Object> entry : scope.entrySet()) {
+                            if (entry.getKey().compareTo("scope") == 0) {
+                                scopes.add((String)entry.getValue());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Arrays.asList(scopes.toArray(new String[0]));
     }
 
     @Override
@@ -773,6 +852,20 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         Map<String, Object> bundle = buildSupportFileBundle(allOperations, allModels);
         generateSupportingFiles(files, bundle);
         config.processSwagger(swagger);
+
+        if (bundle != null) {
+            List<String> availableScopes = getAllAuthMethodScopes((List<CodegenSecurity>) bundle.get("authMethods"));
+            List<String> usedScopes = getAllSwaggerDefinedScopes(swagger);
+
+            if (! availableScopes.containsAll(usedScopes)) {
+                LOGGER.warn("There are some scopes defined on operations in swagger file that are not defined "+
+                        "in securityDefinitions. These Scopes are silently dropped");
+            }
+            if (config.isGenerateCustomScopes()) {
+                generateCustomScopes(files, (List<CodegenSecurity>) bundle.get("authMethods"));
+            }
+        }
+
         return files;
     }
 

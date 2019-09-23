@@ -75,6 +75,7 @@ public class DefaultCodegen {
     protected Set<String> languageSpecificPrimitives = new HashSet<String>();
     protected Map<String, String> importMapping = new HashMap<String, String>();
     protected String modelPackage = "", apiPackage = "", fileSuffix;
+    protected String scopePackage = "";
     protected String modelNamePrefix = "", modelNameSuffix = "";
     protected String testPackage = "";
     protected Map<String, String> apiTemplateFiles = new HashMap<String, String>();
@@ -84,6 +85,8 @@ public class DefaultCodegen {
     protected Map<String, String> apiDocTemplateFiles = new HashMap<String, String>();
     protected Map<String, String> modelDocTemplateFiles = new HashMap<String, String>();
     protected Map<String, String> reservedWordsMappings = new HashMap<String, String>();
+    protected Map<String, String> scopeTemplateFiles = new HashMap<String, String>();
+    protected boolean generateCustomScopes = false;
     protected String templateDir;
     protected String embeddedTemplateDir;
     protected String commonTemplateDir = "_common";
@@ -161,6 +164,10 @@ public class DefaultCodegen {
         if (additionalProperties.containsKey(CodegenConstants.REMOVE_OPERATION_ID_PREFIX)) {
             this.setRemoveOperationIdPrefix(Boolean.valueOf(additionalProperties
                     .get(CodegenConstants.REMOVE_OPERATION_ID_PREFIX).toString()));
+        }
+        if (additionalProperties.containsKey(CodegenConstants.OPTIONAL_GENERATE_CUSTOM_SCOPES)) {
+            generateCustomScopes = Boolean.valueOf(
+                    String.valueOf(additionalProperties.get(CodegenConstants.OPTIONAL_GENERATE_CUSTOM_SCOPES)));
         }
     }
 
@@ -482,6 +489,10 @@ public class DefaultCodegen {
         return modelPackage;
     }
 
+    public String scopePackage() {
+        return scopePackage;
+    }
+
     public String apiPackage() {
         return apiPackage;
     }
@@ -534,6 +545,10 @@ public class DefaultCodegen {
         return apiTemplateFiles;
     }
 
+    public Map<String, String> scopeTemplateFiles() {
+        return scopeTemplateFiles;
+    }
+
     public Map<String, String> modelTemplateFiles() {
         return modelTemplateFiles;
     }
@@ -543,6 +558,10 @@ public class DefaultCodegen {
     }
 
     public String modelFileFolder() {
+        return outputFolder + "/" + modelPackage().replace('.', '/');
+    }
+
+    public String scopeFileFolder() {
         return outputFolder + "/" + modelPackage().replace('.', '/');
     }
 
@@ -1301,6 +1320,15 @@ public class DefaultCodegen {
             return "DefaultApi";
         }
         return initialCaps(name) + "Api";
+    }
+
+    public String scopeToClassName(String scope) {
+        String[] parts = scope.split(":");
+        String output = "";
+        for (String part : parts) {
+            output += part.substring(0, 1).toUpperCase() + part.substring(1);
+        }
+        return output;
     }
 
     /**
@@ -2886,6 +2914,7 @@ public class DefaultCodegen {
                     for(Map.Entry<String, String> scopeEntry : oauth2Definition.getScopes().entrySet()) {
                         Map<String, Object> scope = new HashMap<String, Object>();
                         scope.put("scope", scopeEntry.getKey());
+                        scope.put("classname", scopeToClassName(scopeEntry.getKey()));
                         scope.put("description", escapeText(scopeEntry.getValue()));
 
                         count += 1;
@@ -3400,6 +3429,11 @@ public class DefaultCodegen {
         return apiFileFolder() + File.separator + toApiFilename(tag) + suffix;
     }
 
+    public String scopeFilename(String templateName, String scope) {
+        String suffix = scopeTemplateFiles().get(templateName);
+        return scopeFileFolder() + File.separator + scopeToClassName(scope) + suffix;
+    }
+
     /**
      * Return the full path and API documentation file
      *
@@ -3436,6 +3470,10 @@ public class DefaultCodegen {
 
     public void setSkipOverwrite(boolean skipOverwrite) {
         this.skipOverwrite = skipOverwrite;
+    }
+
+    public boolean isGenerateCustomScopes() {
+        return generateCustomScopes;
     }
 
     public boolean isRemoveOperationIdPrefix() {

@@ -1,6 +1,5 @@
 package io.swagger.codegen.languages;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.samskivert.mustache.Mustache;
@@ -16,7 +15,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
-import java.util.Map.Entry;
 
 import static java.util.UUID.randomUUID;
 
@@ -79,6 +77,10 @@ public class AspNetCoreServerCodegen extends AbstractCSharpCodegen {
                 "Preserve newlines in comments",
                 String.valueOf(this.preserveNewLines));
 
+        addOption(CodegenConstants.OPTIONAL_GENERATE_CUSTOM_SCOPES,
+                "Generate Custom scope handling code",
+                String.valueOf(this.generateCustomScopes));
+
         // CLI Switches
         addSwitch(CodegenConstants.SORT_PARAMS_BY_REQUIRED_FLAG,
                 CodegenConstants.SORT_PARAMS_BY_REQUIRED_FLAG_DESC,
@@ -124,6 +126,15 @@ public class AspNetCoreServerCodegen extends AbstractCSharpCodegen {
             setPackageGuid((String) additionalProperties.get(CodegenConstants.OPTIONAL_PROJECT_GUID));
         }
 
+
+        if (System.getProperty(CodegenConstants.OPTIONAL_GENERATE_CUSTOM_SCOPES) != null) {
+            this.generateCustomScopes = Boolean.valueOf(
+                    String.valueOf(System.getProperty(CodegenConstants.OPTIONAL_GENERATE_CUSTOM_SCOPES)));
+        }
+        additionalProperties.put(CodegenConstants.OPTIONAL_GENERATE_CUSTOM_SCOPES,
+                String.valueOf(this.generateCustomScopes));
+        setGenerateCustomScopes(generateCustomScopes);
+
         String packageFolder = sourceFolder + File.separator + packageName;
 
         boolean interfaceOnly = Boolean.valueOf(String.valueOf(additionalProperties.get(CodegenConstants.INTERFACE_ONLY)));
@@ -151,8 +162,17 @@ public class AspNetCoreServerCodegen extends AbstractCSharpCodegen {
         
         additionalProperties.put("dockerTag", this.packageName.toLowerCase());
 
+        if (generateCustomScopes) {
+            scopeTemplateFiles.put("Security/ScopeAuthorizationPolicy.mustache", "AuthorizationPolicy.cs");
+            scopeTemplateFiles.put("Security/ScopeRequirement.mustache", "Requirement.cs");
+
+
+            supportingFiles.add(new SupportingFile("Security/IScopeRequirement.mustache", packageFolder + File.separator + "Security" + File.separator + "Scopes", "IScopeRequirement.cs"));
+        }
+
         apiPackage = packageName + ".Controllers";
         modelPackage = packageName + ".Models";
+        scopePackage = packageName + ".Security.Scopes";
 
         supportingFiles.add(new SupportingFile("NuGet.Config", "", "NuGet.Config"));
         supportingFiles.add(new SupportingFile("build.sh.mustache", "", "build.sh"));
@@ -195,7 +215,11 @@ public class AspNetCoreServerCodegen extends AbstractCSharpCodegen {
     public void setPackageGuid(String packageGuid) {
         this.packageGuid = packageGuid;
     }
-    
+
+    public void setGenerateCustomScopes(Boolean generateCustomScopes) {
+        this.generateCustomScopes = generateCustomScopes;
+    }
+
     @Override
     public String apiFileFolder() {
         return outputFolder + File.separator + sourceFolder + File.separator + packageName + File.separator + "Controllers";
@@ -216,6 +240,10 @@ public class AspNetCoreServerCodegen extends AbstractCSharpCodegen {
         return outputFolder + File.separator + sourceFolder + File.separator + packageName + File.separator  + "Models";
     }
 
+    @Override
+    public String scopeFileFolder() {
+        return outputFolder + File.separator + sourceFolder + File.separator + packageName + File.separator + "Security" + File.separator + "Scopes";
+    }
 
     @Override
     public Map<String, Object> postProcessSupportingFileData(Map<String, Object> objs) {
