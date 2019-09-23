@@ -92,17 +92,11 @@ namespace {{packageName}}
                 options.RequireHttpsMetadata = true;
                 options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                     {
-                        ValidateIssuer = false,
-                        ValidateAudience = false,
-                        ValidateIssuerSigningKey = false,
-                        RequireSignedTokens = false,
-                        ValidateActor = false,
-                        RequireExpirationTime =false,
-                        ValidateLifetime = false,
-                        ClockSkew = TimeSpan.Zero,
-                        // uncomment code below to circumvent validity check of token to use for testing
+                        // For easier testing uncomment code below to circumvent validity check of token
                         // Also need to add "using System.IdentityModel.Tokens.Jwt;"
                         /*
+                        ValidateIssuer = false,
+                        ValidateAudience = false,
                         SignatureValidator = delegate(string token, TokenValidationParameters parameters)
                             {
                                 var jwt = new JwtSecurityToken(token);
