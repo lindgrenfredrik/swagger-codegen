@@ -578,6 +578,11 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
     }
 
     @Override
+    public String scopeFileFolder() {
+        return outputFolder + File.separator + sourceFolder + File.separator + packageName + File.separator + scopePackage();
+    }
+
+    @Override
     public String toModelFilename(String name) {
         // should be the same as the model name
         return toModelName(name);

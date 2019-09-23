@@ -1,0 +1,22 @@
+using Microsoft.AspNetCore.Authorization;
+
+namespace {{packageName}}.Security.Scopes
+{
+    /// <summary>
+    /// Requirement class for Scope claim containing Policy string
+    /// </summary>
+    public class {{classname}}Requirement : IScopeRequirement
+    {
+        /// <summary>
+        /// Scope claim string value defined in swagger
+        /// </summary>
+        public string Scope { get; } = "{{scope}}";
+
+        /// <summary>
+        /// Scope claims Requirement Constructor
+        /// </summary>
+        public {{classname}}Requirement()
+        {
+        }
+    }
+}

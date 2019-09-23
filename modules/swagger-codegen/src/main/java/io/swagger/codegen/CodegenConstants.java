@@ -214,6 +214,8 @@ public class CodegenConstants {
     public static final String GENERATE_PROPERTY_CHANGED = "generatePropertyChanged";
     public static final String GENERATE_PROPERTY_CHANGED_DESC = "Specifies that models support raising property changed events.";
 
+    public static final String OPTIONAL_GENERATE_CUSTOM_SCOPES = "generateCustomScopes";
+
     public static final String PRESERVE_COMMENT_NEWLINES = "preserveNewlinesInComments";
 
     public static final String NON_PUBLIC_API = "nonPublicApi";

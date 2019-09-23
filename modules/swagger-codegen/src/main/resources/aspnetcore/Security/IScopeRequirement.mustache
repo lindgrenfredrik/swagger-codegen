@@ -1,0 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
+
+namespace {{packageName}}.Security.Scopes
+{
+    /// <summary>
+    /// Interface for Scope Requirement claims
+    /// </summary>
+    public interface IScopeRequirement : IAuthorizationRequirement
+    {
+        /// <summary>
+        /// Scope claim string value used to Register Authorization Policy
+        /// </summary>
+        string Scope { get; }
+    }
+}

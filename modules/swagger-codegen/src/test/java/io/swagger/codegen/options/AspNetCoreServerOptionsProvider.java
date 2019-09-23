@@ -32,6 +32,7 @@ public class AspNetCoreServerOptionsProvider implements OptionsProvider {
                 .put(CodegenConstants.ASP_NET_CORE_VERSION, "2.2")
                 .put(CodegenConstants.INTERFACE_ONLY, "false")
                 .put(CodegenConstants.INTERFACE_CONTROLLER, "false")
+                .put(CodegenConstants.OPTIONAL_GENERATE_CUSTOM_SCOPES, "false")
                 .build();
     }
 

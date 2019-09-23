@@ -39,7 +39,13 @@ namespace {{packageName}}.Controllers
         {{#isApiKey}}
         [Authorize(AuthenticationSchemes = ApiKeyAuthenticationHandler.SchemeName)]
         {{/isApiKey}}
+        {{#isOAuth}}
+        [Authorize(AuthenticationSchemes = "{{name}}")]
+        {{/isOAuth}}
         {{/-first}}
+        {{#scopes}}
+        [Authorize(Policy = "{{scope}}")]
+        {{/scopes}}
         {{/authMethods}}
         [ValidateModelState]
         [SwaggerOperation("{{operationId}}")]{{#responses}}{{#dataType}}

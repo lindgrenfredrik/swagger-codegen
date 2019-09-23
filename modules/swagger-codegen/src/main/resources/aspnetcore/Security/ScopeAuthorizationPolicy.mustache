@@ -1,0 +1,29 @@
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+
+namespace {{packageName}}.Security.Scopes
+{
+    /// <summary>
+    /// Custom Claims Authorization
+    /// </summary>
+    public class {{classname}} : AuthorizationHandler<{{classname}}Requirement>
+    {
+        /// <summary>
+        /// Handle scope claim check
+        /// </summary>
+        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
+                                                       {{classname}}Requirement requirement)
+        {
+            // Update following code to make your custom Authorization check
+            var scopesClaim = context.User.FindFirst("scope"); // Get scope section from JWT token
+            var scopes = scopesClaim?.Value.Split(' ');
+            var hasScope = scopes?.Where(scope => scope == requirement.Scope).Any() ?? false;
+            if (hasScope) {
+                context.Succeed(requirement);
+            }
+            return Task.CompletedTask;
+        }
+    }
+}

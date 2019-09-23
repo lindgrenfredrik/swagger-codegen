@@ -51,6 +51,8 @@ public interface CodegenConfig {
 
     String toApiName(String name);
 
+    String scopeToClassName(String scope);
+
     String toApiVarName(String name);
 
     String toModelName(String name);
@@ -106,6 +108,8 @@ public interface CodegenConfig {
     Map<String, String> importMapping();
 
     Map<String, String> apiTemplateFiles();
+
+    Map<String, String> scopeTemplateFiles();
 
     Map<String, String> modelTemplateFiles();
 
@@ -163,6 +167,8 @@ public interface CodegenConfig {
 
     String apiFilename(String templateName, String tag);
 
+    String scopeFilename(String templateName, String scope);
+
     String apiTestFilename(String templateName, String tag);
 
     String apiDocFilename(String templateName, String tag);
@@ -172,6 +178,8 @@ public interface CodegenConfig {
     boolean isSkipOverwrite();
 
     void setSkipOverwrite(boolean skipOverwrite);
+
+    public boolean isGenerateCustomScopes();
 
     boolean isRemoveOperationIdPrefix();
 

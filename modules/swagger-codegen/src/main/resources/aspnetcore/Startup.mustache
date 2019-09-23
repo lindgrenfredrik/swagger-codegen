@@ -1,6 +1,9 @@
 {{>partial_header}}
 using System;
 using System.IO;
+using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -12,8 +15,14 @@ using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using {{packageName}}.Filters;
 using {{packageName}}.Security;
+{{#generateCustomScopes}}
+using {{packageName}}.Security.Scopes;
+using Microsoft.AspNetCore.Authorization;
+{{/generateCustomScopes}}
 
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 namespace {{packageName}}
 {
@@ -71,6 +80,61 @@ namespace {{packageName}}
                 .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null);
 
             {{/isApiKey}}
+            {{#isOAuth}}
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer("{{name}}", options =>
+            {
+                options.SaveToken = true;
+                options.RequireHttpsMetadata = true;
+                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+                    {
+                        ValidateIssuer = false,
+                        ValidateAudience = false,
+                        ValidateIssuerSigningKey = false,
+                        RequireSignedTokens = false,
+                        ValidateActor = false,
+                        RequireExpirationTime =false,
+                        ValidateLifetime = false,
+                        ClockSkew = TimeSpan.Zero,
+                        // uncomment code below to circumvent validity check of token to use for testing
+                        // Also need to add "using System.IdentityModel.Tokens.Jwt;"
+                        /*
+                        SignatureValidator = delegate(string token, TokenValidationParameters parameters)
+                            {
+                                var jwt = new JwtSecurityToken(token);
+                                return jwt;
+                            },
+                        */
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("SecureKey"))
+                    };
+            });
+            {{#scopes}}
+            {{#generateCustomScopes}}
+            ImportAllAuthorizationRequirement(services);
+            ImportAllAuthorizationHandler(services);
+            {{/generateCustomScopes}}
+            {{^generateCustomScopes}}
+            services.AddAuthorization(auth =>
+            {
+                auth.AddPolicy("{{scope}}", policyBuilder =>
+                    policyBuilder.RequireAssertion(async handler =>
+                        {
+                            var resp = await Task.Run(() => {
+                                var scopesClaim = handler.User.FindFirst("scope");
+                                var scopes = scopesClaim?.Value.Split(' ');
+                                var hasScope = scopes?.Where(scope => scope == "{{scope}}").Any() ?? false;
+                                return hasScope;
+                            });
+                            return resp;
+                        }));
+            });
+            {{/generateCustomScopes}}
+            {{/scopes}}
+            {{/isOAuth}}
             {{/authMethods}}
 
             services
@@ -102,6 +166,36 @@ namespace {{packageName}}
                     c.OperationFilter<GeneratePathParamsValidationFilter>();
                 });
         }
+
+        {{#generateCustomScopes}}
+        private void ImportAllAuthorizationRequirement(IServiceCollection services)
+        {
+            var allRequirements = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(t => t.GetTypes())
+                .Where(t => t.IsClass && t.Namespace == "{{packageName}}.Security.Scopes" &&
+                       typeof(IScopeRequirement).IsAssignableFrom(t) && t != typeof(IScopeRequirement));
+            foreach (var requirement in allRequirements) {
+                Object inst = Activator.CreateInstance(requirement);
+                String scope = (String)requirement.GetProperty("Scope").GetValue(inst, null);
+                services.AddAuthorization(options =>
+                {
+                    options.AddPolicy(scope, policy =>
+                        policy.Requirements.Add((IAuthorizationRequirement)inst));
+                });
+            }
+        }
+
+        private void ImportAllAuthorizationHandler(IServiceCollection services)
+        {
+            var allAuthHandlers = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(t => t.GetTypes())
+                .Where(t => t.IsClass && t.Namespace == "{{packageName}}.Security.Scopes" &&
+                       typeof(IAuthorizationHandler).IsAssignableFrom(t));
+            foreach (var authHandler in allAuthHandlers) {
+                services.AddSingleton(typeof(IAuthorizationHandler), authHandler);
+            }
+        }
+        {{/generateCustomScopes}}
 
         /// <summary>
         /// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
