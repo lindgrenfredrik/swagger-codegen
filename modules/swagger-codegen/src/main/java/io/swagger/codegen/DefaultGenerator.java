@@ -163,6 +163,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         isGenerateApiTests = System.getProperty(CodegenConstants.API_TESTS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_TESTS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_TESTS, true);
         isGenerateApiDocumentation = System.getProperty(CodegenConstants.API_DOCS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_DOCS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_DOCS, true);
 
+
         // Additional properties added for tests to exclude references in project related files
         config.additionalProperties().put(CodegenConstants.GENERATE_API_TESTS, isGenerateApiTests);
         config.additionalProperties().put(CodegenConstants.GENERATE_MODEL_TESTS, isGenerateModelTests);
@@ -622,6 +623,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                                 })
                                 .defaultValue("")
                                 .compile(template);
+
                         writeToFile(outputFilename, tmpl.execute(bundle));
                         files.add(new File(outputFilename));
                     } else {
