@@ -2351,6 +2351,11 @@ public class DefaultCodegen {
 
         op.bodyParam = bodyParam;
         op.httpMethod = httpMethod.toUpperCase();
+        op.isGet = op.httpMethod.equalsIgnoreCase("GET");
+        op.isPost = op.httpMethod.equalsIgnoreCase("POST");
+        op.isPut = op.httpMethod.equalsIgnoreCase("PUT");
+        op.isPatch = op.httpMethod.equalsIgnoreCase("PATCH");
+        op.isDelete = op.httpMethod.equalsIgnoreCase("DELETE");
 
         // move "required" parameters in front of "optional" parameters
         if (sortParamsByRequiredFlag) {
