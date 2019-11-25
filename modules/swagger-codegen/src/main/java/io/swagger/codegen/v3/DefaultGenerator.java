@@ -981,7 +981,9 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             }
             if (mapping != null) {
                 im.put("import", mapping);
-                imports.add(im);
+                if (!imports.contains(im)) {
+                    imports.add(im);
+                }
             }
         }
 
